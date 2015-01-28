@@ -16,6 +16,9 @@ const float max_temp = 28.0;
 const float alpha = (max_temp - min_temp)/volt_range;
 float temp_setting = 0.0;
 
+// Temperature Sensor variables
+float measured_temp = 20.0;
+
 void setup() {
     // Turn off onboard LED
     pinMode(13, OUTPUT);
@@ -31,15 +34,23 @@ void loop() {
     float new_temp_setting = min_temp + alpha*scale;
     
     if(new_temp_setting != temp_setting) {
-        // Update temperature setting
+        // Update temperature setting and update the lcd
         temp_setting = new_temp_setting;
-        
-        // Write the temperature to the screen
-        lcd.setCursor(0,1);
-        lcd.print("Set Temp:   ");
-        lcd.print(temp_setting);
+        UpdateLCD();
     }
     
     delay(50);
+}
+
+void UpdateLCD() {
+    // Write the temperature setting to the screen
+    lcd.setCursor(0,0);
+    lcd.print("Set Temp:   ");
+    lcd.print(temp_setting);
+    
+    // Write the measured temperature to the screen
+    lcd.setCursor(0,1);
+    lcd.print("Meas Temp:  ");
+    lcd.print(measured_temp);
 }
 
