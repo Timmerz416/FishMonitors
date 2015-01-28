@@ -4,9 +4,11 @@
 
 // Includes
 #include <LiquidCrystal.h>
+#include <OneWire.h>
 
 // LCD Controller
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+boolean update = false;
 
 // Theromostat control variables
 const int dialInputPIN = A0;
@@ -17,7 +19,9 @@ const float alpha = (max_temp - min_temp)/volt_range;
 float temp_setting = 0.0;
 
 // Temperature Sensor variables
+const int tempPIN = 6;
 float measured_temp = 20.0;
+OneWire probe(tempPIN);
 
 void setup() {
     // Turn off onboard LED
@@ -34,10 +38,22 @@ void loop() {
     float new_temp_setting = min_temp + alpha*scale;
     
     if(new_temp_setting != temp_setting) {
-        // Update temperature setting and update the lcd
+        // Update temperature setting and indicate refresh
         temp_setting = new_temp_setting;
-        UpdateLCD();
+        update = true;
     }
+    
+    // Get the temperature reading
+    float cur_temp = getTemp();
+    if(cur_temp == -1000) digitalWrite(13, HIGH);
+    else digitalWrite(13, LOW);
+    
+    if(cur_temp != measured_temp) {
+        measured_temp = cur_temp;
+        update = true;
+    }
+    
+    if(update) UpdateLCD();
     
     delay(50);
 }
@@ -52,5 +68,49 @@ void UpdateLCD() {
     lcd.setCursor(0,1);
     lcd.print("Meas Temp:  ");
     lcd.print(measured_temp);
+    
+    update = false;
 }
 
+float getTemp(){
+     //returns the temperature from one DS18S20 in DEG Celsius
+     byte data[12];
+     byte addr[8];
+    
+     if ( !probe.search(addr)) {
+         // no more sensors on chain, reset search
+         probe.reset_search();
+         return -9.0;
+     }
+    
+     if ( OneWire::crc8( addr, 7) != addr[7]) {
+         return -9.1;
+     }
+    
+     if ( addr[0] != 0x10 && addr[0] != 0x28) {
+         return -9.2;
+     }
+    
+     probe.reset();
+     probe.select(addr);
+     probe.write(0x44,1); // start conversion, with parasite power on at the end
+    
+     byte present = probe.reset();
+     probe.select(addr);  
+     probe.write(0xBE); // Read Scratchpad
+    
+     
+     for (int i = 0; i < 9; i++) { // we need 9 bytes
+      data[i] = probe.read();
+     }
+     
+     probe.reset_search();
+     
+     byte MSB = data[1];
+     byte LSB = data[0];
+    
+     float tempRead = ((MSB << 8) | LSB); //using two's compliment
+     float TemperatureSum = tempRead / 16;
+     
+     return TemperatureSum;
+}
