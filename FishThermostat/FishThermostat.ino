@@ -23,10 +23,17 @@ const int tempPIN = 6;
 float measured_temp = 20.0;
 OneWire probe(tempPIN);
 
+// Heater variables
+const int heaterPIN = 7;
+const float tolerance = 0.1;
+
 void setup() {
     // Turn off onboard LED
     pinMode(13, OUTPUT);
     digitalWrite(13, LOW);
+    
+    // Setup heater control pin
+    pinMode(heaterPIN, OUTPUT);
     
     // Start the LCD screen
     lcd.begin(16, 2);
@@ -53,6 +60,11 @@ void loop() {
         update = true;
     }
     
+    // Evaluate if the heater is on/off
+    if(measured_temp > (temp_setting + tolerance)) digitalWrite(heaterPIN, LOW);
+    if(measured_temp < (temp_setting - tolerance)) digitalWrite(heaterPIN, HIGH);
+    
+    // Update display
     if(update) UpdateLCD();
     
     delay(50);
